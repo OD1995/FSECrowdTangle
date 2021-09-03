@@ -4,6 +4,7 @@ from requests.auth import HTTPBasicAuth
 import pandas as pd
 import numpy as np
 import math
+import logging
 import time
 import datetime
 
@@ -57,16 +58,16 @@ class Dashboard:
 
                 response = requests.get(api_url + '/leaderboard',
                                             headers=headers, params=params)
-                print(params)
+                logging.info(params)
                 status_code = response.status_code
                 if response.status_code == 200:
                     leaderboards = response.json()
                 else:
-                    print('ERROR')
+                    logging.info('ERROR')
 
-                    print(response.status_code)
+                    logging.info(response.status_code)
                     leaderboards = None
-               # print(posts)
+               # logging.info(posts)
                 return leaderboards, status_code
 
         def get_leaderboards(self, list_id, api_token):
@@ -74,27 +75,27 @@ class Dashboard:
             #posts = initial_post_call(api_token, offset)
             leaderboards, status_code = Dashboard.initial_leaderboard_call(self, offset, list_id, api_token)
             board_data = leaderboards['result']['accountStatistics']
-            print('length ' + str(len(board_data)))
+            logging.info('length ' + str(len(board_data)))
             len_last_pull = len(board_data)
-            #print(posts['result'])
+            #logging.info(posts['result'])
             while status_code == 200 and len_last_pull != 0:
                 try:
                     offset += 50
-                    print(offset)
+                    logging.info(offset)
                     time.sleep(11) # can only make 6 calls a min to the api
                     leaderboards, status_code = Dashboard.initial_leaderboard_call(self, offset, list_id, api_token)
 
                     next_page = leaderboards['result']['accountStatistics']
                     len_last_pull = len(next_page)
-                    print('last = ' + str(len_last_pull))
-                    #print(next_page)
-                    print('-------------------------------------------------------------')
+                    logging.info('last = ' + str(len_last_pull))
+                    #logging.info(next_page)
+                    logging.info('-------------------------------------------------------------')
 
                     board_data += next_page
-                    print('length ' + str(len(board_data)))
+                    logging.info('length ' + str(len(board_data)))
 
                 except:
-                    print('except end')
+                    logging.info('except end')
                     break
             return board_data
 
@@ -131,16 +132,16 @@ class Dashboard:
                             )
                 response = requests.get(api_url + '/posts',
                                             headers=headers, params=params)
-                print(params)
+                logging.info(params)
                 status_code = response.status_code
                 if response.status_code == 200:
                     posts = response.json()
                 else:
-                    print('ERROR')
+                    logging.info('ERROR')
 
-                    print(response.status_code)
+                    logging.info(response.status_code)
                     posts = None
-               # print(posts)
+               # logging.info(posts)
                 return posts, status_code
 
         def get_posts(self, start_date, list_id, api_token, terms, end_date = 'now'):
@@ -148,26 +149,26 @@ class Dashboard:
             #posts = initial_post_call(api_token, offset)
             posts, status_code = Dashboard.initial_post_call(self, offset, start_date, list_id, api_token, terms, end_date)
             page_data = posts['result']['posts']
-            print('length ' + str(len(page_data)))
+            logging.info('length ' + str(len(page_data)))
             len_last_pull = len(page_data)
-            #print(posts['result'])
+            #logging.info(posts['result'])
             while status_code == 200 and len_last_pull != 0:
                 try:
                     offset += 100
                     time.sleep(11) # can only make 6 calls a min to the api
-                    print(offset)
+                    logging.info(offset)
                     posts, status_code = Dashboard.initial_post_call(self, offset, start_date,  list_id, api_token, terms, end_date)
 
                     next_page = posts['result']['posts']
                     len_last_pull = len(next_page)
-                    print('last = ' + str(len_last_pull))
-                    #print(next_page)
-                    print('-------------------------------------------------------------')
+                    logging.info('last = ' + str(len_last_pull))
+                    #logging.info(next_page)
+                    logging.info('-------------------------------------------------------------')
 
                     page_data += next_page
-                    print('length ' + str(len(page_data)))
+                    logging.info('length ' + str(len(page_data)))
 
                 except:
-                    print('except end')
+                    logging.info('except end')
                     break
             return page_data

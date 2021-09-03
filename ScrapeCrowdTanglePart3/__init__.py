@@ -1,262 +1,16 @@
-# This function is not intended to be invoked directly. Instead it will be
-# triggered by an orchestrator function.
-# Before running this sample, please:
-# - create a Durable orchestration function
-# - create a Durable HTTP starter function
-# - add azure-functions-durable to requirements.txt
-# - run pip install -r requirements.txt
-
-
-#import azure-storage-blob
-#import urllib.request
 import logging
-# from azure.storage.blob import BlobClient
-# from azure.storage.blob import BlobServiceClient
-from azure.storage.blob import BlockBlobService
-# import s3fs
-# from io import BytesIO
-# import tweepy
-import pandas as pd
-# import numpy as np
 import datetime
-# from dateutil.parser import parse
-# import json
-# import re
-#from urllib.request import urlopen
-# from bs4 import BeautifulSoup as bs
-# import boto3
-from CrowdTangleAPI import Dashboard, api_url
+from azure.storage.blob import BlockBlobService
+import pandas as pd
 import time
 import requests
 
-
-def scrape_CrowdTangle():
-
-    #blob_service_client = BlobServiceClient(account_url=sas_url, credential=sas_token)
-    # sas_url='https://octagonsocialdata.blob.core.windows.net/?sv=2019-12-12&ss=b&srt=co&sp=rwlacx&se=2030-09-17T18:10:12Z&st=2020-09-17T10:10:12Z&spr=https&sig=zmJBn%2BDiUbaQozYvMkyj%2FCDUUI1PGo7%2BfBWTMnsvTRY%3D'
-    # sas_token =  '?sv=2019-12-12&ss=b&srt=co&sp=rwlacx&se=2030-09-17T18:10:12Z&st=2020-09-17T10:10:12Z&spr=https&sig=zmJBn%2BDiUbaQozYvMkyj%2FCDUUI1PGo7%2BfBWTMnsvTRY%3D'
-    # blob_service_client = BlobServiceClient(
-    #     account_url=sas_url,
-    #     credential=sas_token
-    # )
+def scrape_CrowdTangle_part3():
+    logging.info('scrape_CrowdTangle_part3 has started')
     bbs = BlockBlobService(
         connection_string='DefaultEndpointsProtocol=https;AccountName=octagonsocialdata;AccountKey=XsuDBxapWwCMQgHib2GiS1Ii96f2+b6Gkjcu1+gPjrRg28zkPzNv1S6+JGkWIwGCHGbO2jkYo5NrVLb2tKEZqg==;EndpointSuffix=core.windows.net'
     )
-
-    fb_api_token = 'vFIzJxjrUp83wKc2ZK6RhfGy3Eu3Ud0OCJaDkDcc'
     insta_api_token = 'T8rE357isKx2WzigmPznBXqvC7rsZAfS4AyGvYsy'
-
-    # bucket = 'futures-fb-daily'
-
-    # cpm_value = 9
-    list_of_terms = [""] #['pros', 'cisco']
-    start_date_val = str(datetime.date.today() - datetime.timedelta(days=1))
-    end_date_val = str(datetime.date.today())
-    list_of_campaigns = [['futures_aus', 1422513],
-                        ['futures_uk', 1423613],
-                        ['futures_us', 1440032]]
-
-    list_of_ig_campaigns = [['futures_ig_uk', 1462837 ],
-                            ['futures_ig_aus', 1462861]]
-
-    #exec('./crowdtangle_api.py')
-    # exec(open('/home/ubuntu/AWS-Lightsail/crowdtangle_api.py').read())
-    d = Dashboard(api_url)
-
-    # convert list to the string format needed for crowdtangle
-    str_list = ''
-    for i in list_of_terms:
-        str_list += (i + ', ')
-    terms = str_list[:-2]
-
-
-
-
-
-    for campaign in list_of_campaigns:
-        logging.info('Campaign: ')
-        logging.info(campaign)
-
-
-        facebook_posts = d.get_posts(start_date_val, campaign[1], fb_api_token, terms, end_date_val)
-        logging.info(f"len(facebook_posts): {len(facebook_posts)}")
-        fb_posts = []
-
-
-        for i in facebook_posts:
-            try:
-                message = i['message'].lower()
-            except:
-                message = ''
-            platform = 'Facebook'
-            author = i['account']['name']
-            profile_img = i['account']['profileImage']
-            try:
-                user_name = i['account']['handle']
-            except:
-                user_name = ''
-            reach = i['account']['subscriberCount']
-            try:
-                post_id = i['platformId'].split('_')[1] # first part is user_id, but don't need
-            except:
-                post_id = i['platformId'].split(':')[0] # sometimes it is this format?
-            time_stamp = i['date']
-            text = message
-            rts_shares = i['statistics']['actual']['shareCount']
-            faves_likes = i['statistics']['actual']['likeCount']
-            comments = i['statistics']['actual']['commentCount']
-            media_type = i['type']
-            try:
-                link = i['link']
-            except:
-                link = ''
-            try:
-                media_url = i['media'][0]['url']
-            except:
-                media_url = ''
-            quot_text = ''
-            quot_img = ''
-            fb_posts.append([platform,
-                            author,
-                            user_name,
-                            reach,
-                            post_id,
-                            time_stamp,
-                            text,
-                            rts_shares,
-                            faves_likes,
-                            comments,
-                            media_type,
-                            link,
-                            media_url,
-                            quot_text,
-                            quot_img,
-                            profile_img
-                            ])
-
-        facebook_df = pd.DataFrame(columns= ['platform_name',
-                                            'author',
-                                            'user_name',
-                                            'reach',
-                                            'post_id',
-                                            'time_stamp',
-                                            'text',
-                                            'rts_shares',
-                                            'faves_likes',
-                                            'comments',
-                                            'media_type',
-                                            'link',
-                                            'media_url',
-                                            'quot_text',
-                                            'quot_img',
-                                            'profile_img'],
-                                data = fb_posts)
-        bytes_to_write = facebook_df.to_csv(None).encode()
-    #    fs = s3fs.S3FileSystem(key=ACCESS_KEY, secret=SECRET_KEY)
-    #    with fs.open('s3://futures-fb-daily/' + campaign[0] + '-' + str(datetime.date.today()) + '.csv', 'wb') as f:
-    #        f.write(bytes_to_write)
-        # blob_client = blob_service_client.get_blob_client("philcontainertest", campaign[0] + "-" + str(datetime.date.today()) + "_accounts_Azure.csv")
-        # blob_client.upload_blob(bytes_to_write, blob_type="BlockBlob")
-        bbs.create_blob_from_bytes(
-            container_name="philcontainertest",
-            blob_name=campaign[0] + "-" + str(datetime.date.today()) + "_accounts_Azure.csv",
-            blob=bytes_to_write
-        )
-
-    # file_name = campaign[0] + '-' + str(datetime.date.today()) +  '.csv'
-    # csv_buffer = BytesIO()
-    # facebook_df.to_csv(csv_buffer).encode('utf-8')
-    # s3_resource = boto3.resource('s3')
-    # s3_resource.Object(bucket, file_name).put(Body=csv_buffer.get_value())
-    #  facebook_df.to_csv(file_name,  encoding='utf-8')
-    # print(file_name)
-    # upload_to_aws('./' + file_name, 'futures-fb-daily', file_name)
-
-    for campaign in list_of_ig_campaigns:
-        logging.info('Instagram campaign: ')
-        logging.info(campaign)
-
-        insta_posts = d.get_posts(start_date_val, campaign[1], insta_api_token, terms, end_date_val)
-        logging.info(f"len(insta_posts): {len(insta_posts)}")
-
-        instagram_posts = []
-
-        for i in insta_posts:
-            try:
-                description = i['description'].lower()
-            except:
-                description = ''
-            platform = 'Instagram'
-            author = i['account']['name']
-            profile_img = i['account']['profileImage']
-            user_name = i['account']['handle']
-            reach = i['account']['subscriberCount']
-            post_id = i['postUrl'].replace('https://www.instagram.com/p/', '').replace('/', '') # first part is user_id, but don't need
-            time_stamp = i['date']
-            text = description
-            rts_shares = 0
-            link = i['postUrl']
-            faves_likes = i['statistics']['actual']['favoriteCount']
-            comments = i['statistics']['actual']['commentCount']
-            media_type = i['type']
-            if media_type == 'photo' or media_type == 'album':
-                try:
-                    media_url = i['media'][0]['url']
-                except:
-                    media_url = ''
-            elif media_type == 'video':
-                try:
-                    media_url = i['media'][1]['url'] # for vid it gives vid url first, then photo
-                except: media_url = ''
-
-            quot_text = ''
-            quot_img = ''
-            instagram_posts.append([platform,
-                            author,
-                            user_name,
-                            reach,
-                            post_id,
-                            time_stamp,
-                            text,
-                            rts_shares,
-                            faves_likes,
-                            comments,
-                            media_type,
-                            link,
-                            media_url,
-                            quot_text,
-                            quot_img,
-                            profile_img
-                            ])
-
-
-
-        facebook_df = pd.DataFrame(columns= ['platform_name',
-                                            'author',
-                                            'user_name',
-                                            'reach',
-                                            'post_id',
-                                            'time_stamp',
-                                            'text',
-                                            'rts_shares',
-                                            'faves_likes',
-                                            'comments',
-                                            'media_type',
-                                            'link',
-                                            'media_url',
-                                            'quot_text',
-                                            'quot_img',
-                                            'profile_img'],
-                                data = instagram_posts)
-        bytes_to_write = facebook_df.to_csv(None).encode()
-        # blob_client = blob_service_client.get_blob_client("philcontainertest", campaign[0] + "-" + str(datetime.date.today()) + "_accounts_Azure.csv")
-        # blob_client.upload_blob(bytes_to_write, blob_type="BlockBlob")
-        bbs.create_blob_from_bytes(
-            container_name="philcontainertest",
-            blob_name=campaign[0] + "-" + str(datetime.date.today()) + "_accounts_Azure.csv",
-            blob=bytes_to_write
-        )
-
     ###################################
     #                                 #
     #      SEARCH EXPORT              #
@@ -311,11 +65,12 @@ def scrape_CrowdTangle():
     time.sleep(12)
     logging.info("about to loop through search list of campaigns")
     for camp in search_list_of_campaigns:
+        logging.info(f'Campaign: {camp[0]}')
         offset = 0
 
         while offset <= 900:
             try:
-            #print(offset)
+            #logging.info(offset)
                 if len(camp) == 4:
                     params = (
                         ('count', 100),
@@ -339,7 +94,7 @@ def scrape_CrowdTangle():
                 response = requests.get('https://api.crowdtangle.com/posts/search',
                                             headers=headers, params=params)
                 resp = response.json()
-                #print(len(resp['result']['posts']))
+                #logging.info(len(resp['result']['posts']))
 
                 for i in resp['result']['posts']:
 
@@ -418,19 +173,19 @@ def scrape_CrowdTangle():
                                     account_url,
                                     account_accountType])
                     all_posts_list.append(indiv_post)
-            # print(len(all_posts_list))
-            # print('--')
+            # logging.info(len(all_posts_list))
+            # logging.info('--')
                 offset += 100
                 time.sleep(12)
             except:
                 offset += 100
                 time.sleep(12)
-                print('SEARCH EXCEPTION')
-                print(offset)
+                logging.info('SEARCH EXCEPTION')
+                logging.info(offset)
                 try:
-                    print(response)
+                    logging.info(response)
                 except:
-                    print('couldnt print response')
+                    logging.info('couldnt logging.info response')
 
     posts_df = pd.DataFrame(data = all_posts_list,
                         columns = [
@@ -456,22 +211,20 @@ def scrape_CrowdTangle():
                         'account_subscriberCount',
                         'account_url',
                         'account_accountType'])
-
+    logging.info(f'posts_df shape: {posts_df.shape}')
+    blob_name = "search_ig_and_fb" + "-" + str(datetime.date.today()) + "_search_Azure.csv"
     bytes_to_write = posts_df.to_csv(None).encode()
-    # blob_client = blob_service_client.get_blob_client(
-    #     "philcontainertest", "search_ig_and_fb" + "-" + str(datetime.date.today()) + "_search_Azure.csv"
-    # )
-    # blob_client.upload_blob(bytes_to_write, blob_type="BlockBlob")
     bbs.create_blob_from_bytes(
         container_name="philcontainertest",
-        blob_name="search_ig_and_fb" + "-" + str(datetime.date.today()) + "_search_Azure.csv",
+        blob_name=blob_name,
         blob=bytes_to_write
     )
+    logging.info(f"posts_df written to: {blob_name}")
 
 
-
-def main() -> str:
-
-    scrape_CrowdTangle()
+def main(name) -> str:
+    logging.info(f'`name`: {name}')
+    logging.info('scrape_CrowdTangle_part3 about to start')
+    scrape_CrowdTangle_part3()
 
     return "Done"
